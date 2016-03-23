@@ -25,9 +25,7 @@
             android:theme="@style/AppTheme.NoActionBar"
             android:screenOrientation="portrait">
         </activity>
-        <service
-            android:name=".smsSend2">
-        </service>
+
     </application>
     <uses-permission
         android:name="android.permission.SEND_SMS"
