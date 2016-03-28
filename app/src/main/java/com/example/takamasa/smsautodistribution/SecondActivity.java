@@ -9,6 +9,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.res.AssetManager;
 import android.graphics.Color;
 import android.os.Bundle;
@@ -32,7 +33,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -51,6 +51,8 @@ public class SecondActivity extends AppCompatActivity
     BroadcastReceiver smsSentReceiver, smsDeliverdReceiver;
     private AsyncSMSsend task;
     ProgressDialog dialog;
+    int argTask;
+    String string=new String();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -80,7 +82,7 @@ public class SecondActivity extends AppCompatActivity
 
 
         //タスクの生成
-        task=new AsyncSMSsend(vg,text,txtEndTime,txtIntervalTime,txtStartTime);
+        task=new AsyncSMSsend(this,vg,text,txtEndTime,txtIntervalTime,txtStartTime);
         dialog=new ProgressDialog(SecondActivity.this);
 
         btnExitSecond.setOnClickListener(new View.OnClickListener() {
@@ -103,9 +105,8 @@ public class SecondActivity extends AppCompatActivity
             @Override
             public void onClick(View v) {
                 AlertDialog.Builder alertDlg = new AlertDialog.Builder(SecondActivity.this);
+
                 btnSmsAutoSend.setTextColor(Color.RED);
-
-
 
                 alertDlg.setTitle("確認");
 
@@ -114,11 +115,131 @@ public class SecondActivity extends AppCompatActivity
                         "OK",
 
                         new DialogInterface.OnClickListener() {
-
                             public void onClick(DialogInterface dialog, int which) {
                                 //OKボタンクリック処理
                                 btnSmsAutoSend.setTextColor(Color.WHITE);
-                                exeTask();
+
+                                SmsManager smsManager = SmsManager.getDefault();
+                                String dateStr = txtIntervalTime.getText().toString();
+                                String endtimeStr = txtEndTime.getText().toString();
+                                SimpleDateFormat sdf1 = new SimpleDateFormat("HH:mm:ss");
+                                SimpleDateFormat sdf2 = new SimpleDateFormat("HH:mm");
+                                Date date = new Date();
+                                int trcnt = vg.getChildCount();
+                                String txt = text.getText().toString();
+                                //メッセージが成功したかどうかをチェックする
+                                sentPI = PendingIntent.getBroadcast(SecondActivity.this, 0, new Intent(SENT), 0);
+                                //メッセージの配達が成功したかどうかをチェックする
+                                deliveredPI = PendingIntent.getBroadcast(SecondActivity.this, 0, new Intent(DELIVERED), 0);
+
+                                for (int j = 0; j < trcnt; j++) {
+                                    final TableRow tr = (TableRow) vg.getChildAt(j);
+
+                                    //---create the BroadcastReceiver when the SMS is sent---
+                                    smsSentReceiver = new BroadcastReceiver() {
+                                        @Override
+                                        public void onReceive(Context arg0, Intent arg1) {
+                                            switch (getResultCode()) {
+                                                case Activity.RESULT_OK:
+                                                    ((TextView) (tr.getChildAt(2))).setText("送信成功");
+                                                    break;
+                                                case SmsManager.RESULT_ERROR_GENERIC_FAILURE:
+                                                    ((TextView) (tr.getChildAt(2))).setText("送信失敗");
+                                                    ((TextView) (tr.getChildAt(2))).setTextColor(Color.RED);
+                                                    break;
+                                                case SmsManager.RESULT_ERROR_NO_SERVICE:
+                                                    ((TextView) (tr.getChildAt(2))).setText("配達失敗");
+                                                    ((TextView) (tr.getChildAt(2))).setTextColor(Color.RED);
+                                                    break;
+                                                case SmsManager.RESULT_ERROR_NULL_PDU:
+                                                    ((TextView) (tr.getChildAt(2))).setText("配達失敗");
+                                                    ((TextView) (tr.getChildAt(2))).setTextColor(Color.RED);
+                                                    break;
+                                                case SmsManager.RESULT_ERROR_RADIO_OFF:
+                                                    ((TextView) (tr.getChildAt(2))).setText("配達失敗");
+                                                    ((TextView) (tr.getChildAt(2))).setTextColor(Color.RED);
+                                                    break;
+                                            }
+                                        }
+                                    };
+                                    //---create the BroadcastReceiver when the SMS is delivered---
+                                    smsDeliverdReceiver = new BroadcastReceiver(){
+                                        @Override
+                                        public void onReceive(Context arg0, Intent arg1){
+                                            switch (getResultCode()){
+                                                case Activity.RESULT_OK:
+                                                    ((TextView) (tr.getChildAt(2))).setText("送信成功");
+                                                    break;
+                                                case Activity.RESULT_CANCELED:
+                                                    ((TextView) (tr.getChildAt(2))).setText("送信失敗");
+                                                    ((TextView) (tr.getChildAt(2))).setTextColor(Color.RED);
+                                                    break;
+                                                }
+                                            }
+                                        };
+
+                                    //---ddddregister the two BroadcastReceivers---
+                                    registerReceiver(smsSentReceiver, new IntentFilter(SENT));
+                                    registerReceiver(smsDeliverdReceiver, new IntentFilter(DELIVERED));
+
+                                    String destinationAddress = ((TextView) (tr.getChildAt(0))).getText().toString();
+                                    smsManager.sendTextMessage(
+                                            destinationAddress,
+                                            null, txt, sentPI, deliveredPI);
+
+                                    try {
+                                        Date formatDate = sdf2.parse(dateStr);
+                                        String startTimeStr = txtStartTime.getText().toString();
+                                        Calendar cal2 = Calendar.getInstance();
+                                        Date starttime = sdf2.parse(startTimeStr.toString());
+                                        Date nowtime = cal2.getTime();
+                                        String nowtimestr = String.format(String.format("%1$02d", nowtime.getHours()) + ":" + String.format("%1$02d", nowtime.getMinutes()));
+                                        Date nowtimestr2 = sdf2.parse(nowtimestr);
+
+                                        int diff = nowtimestr2.compareTo(starttime);
+                                        if (diff < 0) {
+                                            ((TextView) (tr.getChildAt(1))).setText("WAIT");
+                                        } else {
+                                            ((TextView) (tr.getChildAt(1))).setText(sdf1.format(date));
+                                        }
+
+                                        //終了時間チェック
+                                        Calendar cal = Calendar.getInstance();
+                                        cal.add(Calendar.HOUR_OF_DAY, formatDate.getHours());
+                                        cal.add(Calendar.MINUTE, formatDate.getMinutes());
+
+                                        Date endtime = sdf2.parse(endtimeStr.toString());
+                                        Date nexttime = cal.getTime();
+                                        String nexttimestr = String.format(String.format("%1$02d", nexttime.getHours()) + ":" + String.format("%1$02d", nexttime.getMinutes()));
+                                        Date nexttimestr2 = sdf2.parse(nexttimestr);
+
+                                        int diff2 = nexttimestr2.compareTo(endtime);
+
+                                        if (diff2 < 0) {
+                                            int diff3 = nowtimestr2.compareTo(nexttimestr2);
+                                            if (diff3 > 0) {
+                                                ((TextView) (tr.getChildAt(3))).setText("END");
+                                            } else {
+                                                ((TextView) (tr.getChildAt(3))).setText(sdf1.format(cal.getTime()));
+                                            }
+                                        } else {
+                                            ((TextView) (tr.getChildAt(3))).setText("END");
+                                        }
+
+                                        String endtimeC=(String.format(String.format("%1$02d", endtime.getHours()) + "." + String.format("%1$02d", endtime.getMinutes())));
+                                        String nowtimeC=(String.format(String.format("%1$02d", nowtime.getHours()) + "." + String.format("%1$02d", nowtime.getMinutes())));
+                                        double endtimeCint=Double.parseDouble(endtimeC);
+                                        double nowtimeCint=Double.parseDouble(nowtimeC);
+                                        double difftimeC=endtimeCint-nowtimeCint;
+                                        int difftimeCint=(int)difftimeC;
+
+                                        String intervalC= dateStr.substring(0, 2);
+                                        int intervalCint=Integer.parseInt(intervalC);
+                                        argTask=difftimeCint/intervalCint;
+                                    } catch (Exception e) {
+                                    }
+                                }
+                                task.execute(argTask);
                             }
                         });
                 alertDlg.setNegativeButton(
@@ -132,7 +253,6 @@ public class SecondActivity extends AppCompatActivity
                         });
                 // 表示
                 alertDlg.create().show();
-                alertDlg.create().dismiss();
             }
         });
 
@@ -176,14 +296,12 @@ public class SecondActivity extends AppCompatActivity
         });
     }
 
-    public void exeTask(){
-        dialog.setTitle("Please wait");
-        dialog.setMessage("SMS自動送信中...");
-        dialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
-        dialog.setCancelable(true);
-        dialog.show();
-
-        task.execute(1);
+    @Override
+    public void onPause(){
+        super.onPause();
+        //---unregister the two BroadcastReceivers---
+//        unregisterReceiver(smsSentReceiver);
+//        unregisterReceiver(smsDeliverdReceiver);
     }
 
     //セカンド画面にて【EXIT】ボタンを押下した時の処理
@@ -208,133 +326,12 @@ public class SecondActivity extends AppCompatActivity
                     public void onClick(DialogInterface dialog, int which) {
                         // Cancel ボタンクリック処理
                         btnExitSecond.setTextColor(Color.WHITE);
-                        //Toast.makeText(SecondActivity.this, "キャンセルしました", Toast.LENGTH_SHORT).show();
                     }
                 });
         // 表示
         alertDlg.create().show();
     }
 
-    public void smsSend(){
-            //メッセージが成功したかどうかをチェックする
-            sentPI = PendingIntent.getBroadcast(SecondActivity.this, 0, new Intent(SENT), 0);
-            //メッセージの配達が成功したかどうかをチェックする
-            deliveredPI = PendingIntent.getBroadcast(SecondActivity.this, 0, new Intent(DELIVERED), 0);
-
-                                    SmsManager smsManager = SmsManager.getDefault();
-                                    ViewGroup vg = (ViewGroup) findViewById(R.id.tblLayout);
-                                    TextView text = (TextView) findViewById(R.id.txtInfo);
-                                    TextView txtEndTime = (TextView) findViewById(R.id.txtEndTime);
-                                    TextView txtIntervalTime = (TextView) findViewById(R.id.txtIntervalTime);
-                                    TextView txtStartTime = (TextView) findViewById(R.id.txtStartTime);
-                                    String txt = text.getText().toString();
-                                    int trcnt = vg.getChildCount();
-
-                                    // Date型変換
-                                    try {
-                                        for (int i=0;i<3;i++) {
-
-                                            String dateStr = txtIntervalTime.getText().toString();
-                                            String endtimeStr = txtEndTime.getText().toString();
-                                            String startTimeStr = txtStartTime.getText().toString();
-
-
-                                            if (trcnt == 0) {
-                                                Toast.makeText(SecondActivity.this, "送信に失敗しました", Toast.LENGTH_SHORT).show();
-                                            }
-
-
-                                            SimpleDateFormat sdf1 = new SimpleDateFormat("HH:mm:ss");
-                                            SimpleDateFormat sdf2 = new SimpleDateFormat("HH:mm");
-                                            // Date型変換
-                                            Date formatDate = sdf2.parse(dateStr);
-
-                                            for (int j = 0; j < trcnt; j++) {
-                                                final TableRow tr = (TableRow) vg.getChildAt(j);
-
-                                                //---create the BroadcastReceiver when the SMS is sent---
-
-                                                smsSentReceiver = new BroadcastReceiver() {
-                                                    @Override
-                                                    public void onReceive(Context arg0, Intent arg1) {
-                                                        switch (getResultCode()) {
-                                                            case Activity.RESULT_OK:
-                                                                ((TextView) (tr.getChildAt(2))).setText("送信成功");
-                                                                break;
-                                                            case SmsManager.RESULT_ERROR_GENERIC_FAILURE:
-                                                                ((TextView) (tr.getChildAt(2))).setText("送信失敗");
-                                                                ((TextView) (tr.getChildAt(2))).setTextColor(Color.RED);
-                                                                break;
-                                                            case SmsManager.RESULT_ERROR_NO_SERVICE:
-                                                                ((TextView) (tr.getChildAt(2))).setText("配達失敗");
-                                                                ((TextView) (tr.getChildAt(2))).setTextColor(Color.RED);
-                                                                break;
-                                                            case SmsManager.RESULT_ERROR_NULL_PDU:
-                                                                ((TextView) (tr.getChildAt(2))).setText("配達失敗");
-                                                                ((TextView) (tr.getChildAt(2))).setTextColor(Color.RED);
-                                                                break;
-                                                            case SmsManager.RESULT_ERROR_RADIO_OFF:
-                                                                ((TextView) (tr.getChildAt(2))).setText("配達失敗");
-                                                                ((TextView) (tr.getChildAt(2))).setTextColor(Color.RED);
-                                                                break;
-                                                        }
-                                                    }
-                                                };
-
-                                                String destinationAddress = ((TextView) (tr.getChildAt(0))).getText().toString();
-                                                smsManager.sendTextMessage(
-                                                        destinationAddress,
-                                                        null, txt, sentPI, deliveredPI);
-
-                                                try {
-                                                    Thread.sleep(60 * 1000);
-                                                }catch (Exception e){
-                                                }
-
-                                                Date date = new Date();
-
-                                                //開始時間チェック
-                                                Date starttime = sdf2.parse(startTimeStr.toString());
-                                                Calendar cal2 = Calendar.getInstance();
-                                                Date nowtime = cal2.getTime();
-                                                String nowtimestr = String.format(String.format("%1$02d", nowtime.getHours()) + ":" + String.format("%1$02d", nowtime.getMinutes()));
-                                                Date nowtimestr2 = sdf2.parse(nowtimestr);
-
-                                                int diff = nowtimestr2.compareTo(starttime);
-                                                if (diff < 0) {
-                                                    ((TextView) (tr.getChildAt(1))).setText("WAIT");
-                                                } else {
-                                                    ((TextView) (tr.getChildAt(1))).setText(sdf1.format(date));
-                                                }
-
-                                                //終了時間チェック
-                                                Calendar cal = Calendar.getInstance();
-                                                cal.add(Calendar.HOUR_OF_DAY, formatDate.getHours());
-                                                cal.add(Calendar.MINUTE, formatDate.getMinutes());
-
-                                                Date endtime = sdf2.parse(endtimeStr.toString());
-
-                                                Date nexttime = cal.getTime();
-                                                String nexttimestr = String.format(String.format("%1$02d", nexttime.getHours()) + ":" + String.format("%1$02d", nexttime.getMinutes()));
-                                                Date nexttimestr2 = sdf2.parse(nexttimestr);
-
-                                                int diff2 = nexttimestr2.compareTo(endtime);
-                                                if (diff2 < 0) {
-                                                    int diff3 = nowtimestr2.compareTo(nexttimestr2);
-                                                    if (diff3 > 0) {
-                                                        ((TextView) (tr.getChildAt(3))).setText("END");
-                                                    } else {
-                                                        ((TextView) (tr.getChildAt(3))).setText(sdf1.format(cal.getTime()));
-                                                    }
-                                                } else {
-                                                    ((TextView) (tr.getChildAt(3))).setText("END");
-                                                }
-                                            }
-                                        }
-                                    } catch (ParseException e) {
-                                        Toast.makeText(SecondActivity.this, "例外エラー発生", Toast.LENGTH_SHORT).show();
-                                    }
-                        }
 
     //セカンド画面にて【CSV読込み】ボタンを押下した時の処理
     public void csvRead() {
@@ -402,6 +399,12 @@ public class SecondActivity extends AppCompatActivity
                                     case 3:
                                         //引数n:配信間隔
                                         txtIntervalTime.setText(String.format("%1$02d", hourOfDay) + ":" + String.format("%1$02d", minute));
+                                        txtIntervalTime.setText(String.format("%1$02d", hourOfDay) + ":00");
+
+                                        String chkStr=txtIntervalTime.getText().toString().substring(0,2);
+                                        if (chkStr.equals("00")){
+                                            Toast.makeText(SecondActivity.this,"1時間未満は設定できません",Toast.LENGTH_SHORT).show();
+                                        }
                                         break;
                                 }
                             }
