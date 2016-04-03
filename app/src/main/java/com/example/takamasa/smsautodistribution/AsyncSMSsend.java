@@ -3,6 +3,10 @@ package com.example.takamasa.smsautodistribution;
 import android.app.Activity;
 import android.app.PendingIntent;
 import android.app.ProgressDialog;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.AsyncTask;
 import android.telephony.SmsManager;
 import android.util.Log;
@@ -12,7 +16,6 @@ import android.widget.TextView;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 
@@ -23,6 +26,7 @@ import java.util.Date;
 public class AsyncSMSsend extends AsyncTask<Integer, Integer, Integer> {
 
     ViewGroup vg;
+    TableRow tr;
     TextView text;
     TextView txtEndTime;
     TextView txtIntervalTime;
@@ -32,26 +36,36 @@ public class AsyncSMSsend extends AsyncTask<Integer, Integer, Integer> {
     final String TAG = "AsyncTaskActivity";
     PendingIntent sentPI, deliveredPI;
     ProgressDialog progressDialog;
+    BroadcastReceiver smsSentReceiver, smsDeliverdReceiver;
+    String SENT = "SMS_SENT";
+    String DELIVERED = "SMS_DELIVERED";
 
     String txt;
     String dateStr;
+    String starttimestr;
     String nowtimestr;
     String nexttimestr;
     String endtimeStr;
+
     int trcnt;
     int j;
     int i;
-    ArrayList<TableRow> trRow=new ArrayList<TableRow>();
-    ArrayList<String>trStr=new ArrayList<String >();
-    SimpleDateFormat sdf1 = new SimpleDateFormat("HH:mm:ss");
+    int diff2;
+
     SimpleDateFormat sdf2 = new SimpleDateFormat("HH:mm");
+
+    String[][]rowStrList;
+    String[] BroadReceiveStr;
+
 
     SmsManager smsManager = SmsManager.getDefault();
     Calendar cal = Calendar.getInstance();
+    Calendar cal2 = Calendar.getInstance();
 
     Date date = new Date();
     Date nowtime;
     Date nexttime;
+    Date starttime;
     Date endtime;
     Date formatDate;
     Date nowtimestr2;
@@ -68,38 +82,6 @@ public class AsyncSMSsend extends AsyncTask<Integer, Integer, Integer> {
         this.txtEndTime=txtEndTime;
         this.txtIntervalTime=txtIntervalTime;
         this.txtStartTime=txtStartTime;
-
-        dateStr = txtIntervalTime.getText().toString();
-
-        //現在時間定義
-        Calendar cal2 = Calendar.getInstance();
-        nowtime = cal2.getTime();
-        nowtimestr = String.format(String.format("%1$02d", nowtime.getHours()) + ":" + String.format("%1$02d", nowtime.getMinutes()));
-
-        for (j = 0; j < trcnt; j++) {
-            trRow.add((TableRow) vg.getChildAt(j));
-            trStr.add(trRow.get(j).toString());
-        }
-
-        nexttime = cal.getTime();
-        nexttimestr = String.format(String.format("%1$02d", nexttime.getHours()) + ":" + String.format("%1$02d", nexttime.getMinutes()));
-        endtimeStr = txtEndTime.getText().toString();
-
-        try {
-            formatDate = sdf2.parse(dateStr);
-            nowtimestr2 = sdf2.parse(nowtimestr);
-            nexttimestr2 = sdf2.parse(nexttimestr);
-            endtime = sdf2.parse(endtimeStr.toString());
-        } catch (ParseException e) {
-            e.printStackTrace();
-        }
-
-        //次回送信時間定義
-        cal.add(Calendar.HOUR_OF_DAY, formatDate.getHours());
-        cal.add(Calendar.MINUTE, formatDate.getMinutes());
-
-        txt = text.getText().toString();
-        trcnt = vg.getChildCount();
     }
 
     /**
@@ -109,11 +91,51 @@ public class AsyncSMSsend extends AsyncTask<Integer, Integer, Integer> {
     protected void onPreExecute() {
         Log.d(TAG, "onPreExecute");
 
+        dateStr = txtIntervalTime.getText().toString();
+        starttimestr=txtStartTime.getText().toString();
+
+        nowtime = cal2.getTime();
+        nowtimestr = String.format(String.format("%1$02d", nowtime.getHours()) + ":" + String.format("%1$02d", nowtime.getMinutes()));
+
+        nexttime = cal.getTime();
+        nexttimestr = String.format(String.format("%1$02d", nexttime.getHours()) + ":" + String.format("%1$02d", nexttime.getMinutes()));
+        endtimeStr = txtEndTime.getText().toString();
+
+        try {
+            formatDate = sdf2.parse(dateStr);
+            starttime = sdf2.parse(starttimestr);
+            nowtimestr2 = sdf2.parse(nowtimestr);
+            nexttimestr2 = sdf2.parse(nexttimestr);
+            endtime = sdf2.parse(endtimeStr);
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+
+        txt = text.getText().toString();
+        trcnt = vg.getChildCount();
+
+        rowStrList=new String[trcnt+1][4];
+
+        for (int i=0;i<trcnt;i++){
+            tr = (TableRow) vg.getChildAt(i);
+            rowStrList[i][0]=((TextView) (tr.getChildAt(0))).getText().toString();
+            rowStrList[i][1]=((TextView) (tr.getChildAt(1))).getText().toString();
+            rowStrList[i][2]=((TextView) (tr.getChildAt(2))).getText().toString();
+            rowStrList[i][3]=((TextView) (tr.getChildAt(3))).getText().toString();
+            Log.d(TAG, rowStrList[i][0]);
+            Log.d(TAG, rowStrList[i][1]);
+            Log.d(TAG, rowStrList[i][2]);
+            Log.d(TAG, rowStrList[i][3]);
+        }
+
         progressDialog=new ProgressDialog(uiActivity);
         progressDialog.setTitle("Please wait");
-        progressDialog.setMessage("SMS自動送信中...");
+        if(rowStrList[i][3]==null) {
+            progressDialog.setMessage("SMS自動送信中(NEXT➡︎" + rowStrList[i][3].substring(0, 5) + ")...");
+        }
         progressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
         progressDialog.setIndeterminate(false);
+        progressDialog.setCancelable(true);
         progressDialog.show();
     }
 
@@ -122,37 +144,161 @@ public class AsyncSMSsend extends AsyncTask<Integer, Integer, Integer> {
      */
     @Override
     protected Integer doInBackground(Integer...params){
-
         Log.d(TAG, "doInBackground");
 
         progressDialog.setMax(params[0]);
-        // Date型変換
-        for (i=0;i<params[0]+1;i++) {
-            for (j = 0; j < trcnt; j++) {
-                try {
-                    int diff3 = nexttimestr2.compareTo(date);
-                    while (diff3 < 0) {
-                        if (((trStr.get(j))).equals("WAIT")) {
-                        } else {
-                            if (diff3 > 0) {
-                                String destinationAddress = (trStr.get(j));
-                                smsManager.sendTextMessage(
-                                        destinationAddress,
-                                        null, txt, sentPI, deliveredPI);
-                            }
-                        }
+        j=0;
+        i=0;
+
+
+        for (j=0;j<params[0];j++) {
+            for (i = 0; i < trcnt; i++) {
+
+                if (rowStrList[i][3].equals("END")) {
+                    Log.d(TAG, "END" + i);
+                        break;
+
+                }
+
+                while(rowStrList[i][1].equals("WAIT")){
+                    Log.d(TAG, "STARTwait");
+                    Calendar cal3 = Calendar.getInstance();
+                    nowtime = cal3.getTime();
+                    nowtimestr = String.format(String.format("%1$02d", nowtime.getHours()) + ":" + String.format("%1$02d", nowtime.getMinutes()));
+                    try {
+                        nowtimestr2 = sdf2.parse(nowtimestr);
+                    }catch (Exception e){
+                        Log.d(TAG, "err(STARTwait)");
                     }
+
+                    diff2 = nowtimestr2.compareTo(starttime);
+                    if (diff2<0) {
+                        Log.d(TAG, "WAIT:" + i + ":" + nowtimestr2.toString());
+                        try {
+                            Thread.sleep(180 * 1000);
+                        } catch (Exception e) {
+                            Log.d(TAG, "err(WAIT):" + i);
+                        }
+                    }else{
+                        break;
+                    }
+
+                }
+                //次回送信時間定義
+                cal.add(Calendar.HOUR_OF_DAY, formatDate.getHours());
+                cal.add(Calendar.MINUTE, formatDate.getMinutes());
+
+                nexttime = cal.getTime();
+                nexttimestr = String.format(String.format("%1$02d", nexttime.getHours()) + ":" + String.format("%1$02d", nexttime.getMinutes()));
+                try {
+                    nexttimestr2 = sdf2.parse(nexttimestr);
                 }catch (Exception e){
                 }
+
+                diff2 = nowtimestr2.compareTo(nexttimestr2);
+                if(diff2<0){
+                    while (diff2<0) {
+                        Log.d(TAG, "NEXTwait(next):"+nexttimestr2+":"+i);
+                        Log.d(TAG, "NEXTwait(now):"+nowtimestr2+":"+i);
+
+                        try {
+                            Thread.sleep(180 * 1000);
+                        } catch (Exception e) {
+                            Log.d(TAG, "err(NEXT):" + i);
+                        }
+
+                        Calendar cal3 = Calendar.getInstance();
+                        nowtime = cal3.getTime();
+                        nowtimestr = String.format(String.format("%1$02d", nowtime.getHours()) + ":" + String.format("%1$02d", nowtime.getMinutes()));
+                        try {
+                            nowtimestr2 = sdf2.parse(nowtimestr);
+                            diff2 = nowtimestr2.compareTo(nexttimestr2);
+                            rowStrList[i][1]=nowtimestr;
+                            rowStrList[i][3]=nexttimestr;
+                        }catch (Exception e){
+                            Log.d(TAG, "err(NEXTwait)"+nowtimestr2+":"+i);
+                        }
+                    }
+                }
+
+                smsSentReceiver = new BroadcastReceiver() {
+                    @Override
+                    public void onReceive(Context arg0, Intent arg1) {
+                        switch (getResultCode()) {
+                            case Activity.RESULT_OK:
+                                BroadReceiveStr[i] = "送信成功";
+                                Log.d(TAG, "Sent送信成功:" + i);
+                                break;
+                            case SmsManager.RESULT_ERROR_GENERIC_FAILURE:
+                                BroadReceiveStr[i] = "送信失敗";
+                                Log.d(TAG, "Sent送信失敗:" + i);
+                                break;
+                            case SmsManager.RESULT_ERROR_NO_SERVICE:
+                                BroadReceiveStr[i] = "配達失敗";
+                                Log.d(TAG, "Sent配達失敗:" + i);
+                                break;
+                            case SmsManager.RESULT_ERROR_NULL_PDU:
+                                BroadReceiveStr[i] = "配達失敗";
+                                Log.d(TAG, "Sent配達失敗:" + i);
+                                break;
+                            case SmsManager.RESULT_ERROR_RADIO_OFF:
+                                BroadReceiveStr[i] = "配達失敗";
+                                Log.d(TAG, "Sent配達失敗:" + i);
+                                break;
+                        }
+                    }
+                };
+
+                //---create the BroadcastReceiver when the SMS is delivered---
+                smsDeliverdReceiver = new BroadcastReceiver(){
+                    @Override
+                    public void onReceive(Context arg0, Intent arg1){
+                        switch (getResultCode()){
+                            case Activity.RESULT_OK:
+                                BroadReceiveStr[i] = "配達失敗";
+                                Log.d(TAG, "Deliverd配達失敗:" + i);
+                                break;
+                            case Activity.RESULT_CANCELED:
+                                BroadReceiveStr[i] = "配達失敗";
+                                Log.d(TAG, "Deliverd配達失敗:" + i);
+                                break;
+                        }
+                    }
+                };
+
+                //---ddddregister the two BroadcastReceivers---
+                uiActivity.registerReceiver(smsSentReceiver, new IntentFilter(SENT));
+                uiActivity.registerReceiver(smsDeliverdReceiver, new IntentFilter(DELIVERED));
+
+                try {
+                    nowtimestr2 = sdf2.parse(nowtimestr);
+                } catch (Exception e) {
+                    Log.d(TAG, e.toString());
+                }
+
+                    Log.d(TAG, "send:" + i + ":" + rowStrList[i][1] + ":" + rowStrList[i][0]);
+
+                    String destinationAddress = rowStrList[i][0];
+                    smsManager.sendTextMessage(
+                            destinationAddress,
+                            null, txt, sentPI, deliveredPI);
             }
             try {
-                Thread.sleep(10 * 1000);
+                Log.d(TAG, "Thread.sleep");
+                Thread.sleep(30 * 1000);
             } catch (Exception e) {
+                Log.d(TAG, "err(send):" + i);
             }
-            publishProgress(i);
+            publishProgress(j);
+            //次回送信時間定義
+            cal.add(Calendar.HOUR_OF_DAY, formatDate.getHours());
+            cal.add(Calendar.MINUTE, formatDate.getMinutes());
+            Log.d(TAG, "Addtime" + i + ":" + cal.getTime().toString());
         }
-        return params[0];
+        Log.d(TAG, "sendALLcount:" + j);
+        return i;
     }
+
 
     /**
      *進捗状況をUIスレッドで表示する
@@ -161,6 +307,7 @@ public class AsyncSMSsend extends AsyncTask<Integer, Integer, Integer> {
     protected void onProgressUpdate(Integer... progress) {
         Log.d(TAG, "onProgressUpdate");
         progressDialog.incrementProgressBy(progress[0]);
+        progressDialog.setMessage("SMS自動送信中(NEXT➡︎" + rowStrList[i][3].substring(0, 5) + ")...");
     }
 
     /**
@@ -170,25 +317,14 @@ public class AsyncSMSsend extends AsyncTask<Integer, Integer, Integer> {
     protected void onPostExecute(Integer result){
         Log.d(TAG, "onPostExecute");
 
-        for (j = 0; j < trcnt; j++) {
-            TableRow tr = (TableRow) vg.getChildAt(j);
-            try {
-                int diff2 = nexttimestr2.compareTo(endtime);
-                ((TextView) (tr.getChildAt(1))).setText(sdf1.format(date));
-                if (diff2 < 0) {
-                    int diff3 = nowtimestr2.compareTo(nexttimestr2);
-                    if (diff3 > 0) {
-                        ((TextView) (tr.getChildAt(3))).setText("END");
-                    } else {
-                        ((TextView) (tr.getChildAt(3))).setText(sdf1.format(cal.getTime()));
-                    }
-                } else {
-                    ((TextView) (tr.getChildAt(3))).setText("END");
-                }
-            } catch (Exception e) {
-            }
+        for (i = 0; i < result; i++) {
+            tr = (TableRow) vg.getChildAt(j);
+            //((TextView) (tr.getChildAt(0))).setText(rowStrList[i][0]);
+            ((TextView) (tr.getChildAt(1))).setText(rowStrList[i][1]);
+            ((TextView) (tr.getChildAt(2))).setText(BroadReceiveStr[i]);
+            ((TextView) (tr.getChildAt(3))).setText(rowStrList[i][3]);
         }
+        Log.d(TAG, "progressDialog.dismiss");
         progressDialog.dismiss();
-
     }
 }
