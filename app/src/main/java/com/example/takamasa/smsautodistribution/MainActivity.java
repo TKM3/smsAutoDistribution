@@ -74,7 +74,7 @@ public class MainActivity extends AppCompatActivity {
                 new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int which) {
                         // Cancel ボタンクリック処理
-                        Toast.makeText(MainActivity.this, "キャンセルしました", Toast.LENGTH_SHORT).show();
+                        //Toast.makeText(MainActivity.this, "キャンセルしました", Toast.LENGTH_SHORT).show();
                     }
                 });
         // 表示
