@@ -235,7 +235,12 @@
                       android:background="@drawable/frame_border_tableheader"
                       android:layout_width="@dimen/second_column_sendtime_width"
                       android:gravity="center"/>
-            <TextView android:text=" 送信結果 "
+            <TextView android:text=" 送信 "
+                      android:textColor="@color/white"
+                      android:background="@drawable/frame_border_tableheader"
+                      android:layout_width="@dimen/second_column_result_width"
+                      android:gravity="center"/>
+            <TextView android:text=" 配信 "
                       android:textColor="@color/white"
                       android:background="@drawable/frame_border_tableheader"
                       android:layout_width="@dimen/second_column_result_width"

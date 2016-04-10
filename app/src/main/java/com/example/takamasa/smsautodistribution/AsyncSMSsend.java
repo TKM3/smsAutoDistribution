@@ -7,6 +7,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.graphics.Color;
 import android.os.AsyncTask;
 import android.telephony.SmsManager;
 import android.util.Log;
@@ -48,6 +49,7 @@ public class AsyncSMSsend extends AsyncTask<Integer, Integer, Integer> {
     String nexttimestr;
     String nexttimeIniProgresstr;
     String endtimeStr;
+    String IninexttimeStr;
 
     int trcnt;
     int j;
@@ -58,19 +60,20 @@ public class AsyncSMSsend extends AsyncTask<Integer, Integer, Integer> {
     SimpleDateFormat sdf2 = new SimpleDateFormat("HH:mm");
 
     String[][]rowStrList;
-    String[]BroadReceiveStr;
-
+    String[]smsSent;
+    String[]smsDeliverd;
 
     SmsManager smsManager = SmsManager.getDefault();
     Calendar cal = Calendar.getInstance();
     Calendar cal2 = Calendar.getInstance();
     Calendar cal3 = Calendar.getInstance();
     Calendar cal4 = Calendar.getInstance();
+    Calendar cal5 = Calendar.getInstance();
 
-    Date date = new Date();
     Date nowtime;
     Date nexttime;
     Date nexttimeIniProgress;
+    Date Ininexttime;
     Date starttime;
     Date endtime;
     Date formatDate;
@@ -122,11 +125,18 @@ public class AsyncSMSsend extends AsyncTask<Integer, Integer, Integer> {
         nexttimeIniProgress = cal3.getTime();
         nexttimeIniProgresstr = String.format(String.format("%1$02d", nexttimeIniProgress.getHours()) + ":" + String.format("%1$02d", nexttimeIniProgress.getMinutes()));
 
+        cal5.add(Calendar.HOUR_OF_DAY, formatDate.getHours());
+        cal5.add(Calendar.MINUTE, formatDate.getMinutes());
+        Ininexttime = cal5.getTime();
+        IninexttimeStr = String.format(String.format("%1$02d", nexttimeIniProgress.getHours()) + ":" + String.format("%1$02d", nexttimeIniProgress.getMinutes()));
+
+
         txt = text.getText().toString();
         trcnt = vg.getChildCount();
 
-        rowStrList=new String[trcnt+1][4];
-        BroadReceiveStr=new String[trcnt+1];
+        rowStrList=new String[trcnt+1][5];
+        smsSent=new String[trcnt+1];
+        smsDeliverd=new String[trcnt+1];
 
         for (int i=0;i<trcnt;i++){
             tr = (TableRow) vg.getChildAt(i);
@@ -134,15 +144,17 @@ public class AsyncSMSsend extends AsyncTask<Integer, Integer, Integer> {
             rowStrList[i][1]=((TextView) (tr.getChildAt(1))).getText().toString();
             rowStrList[i][2]=((TextView) (tr.getChildAt(2))).getText().toString();
             rowStrList[i][3]=((TextView) (tr.getChildAt(3))).getText().toString();
+            rowStrList[i][4]=((TextView) (tr.getChildAt(4))).getText().toString();
             Log.d(TAG, rowStrList[i][0]);
             Log.d(TAG, rowStrList[i][1]);
             Log.d(TAG, rowStrList[i][2]);
             Log.d(TAG, rowStrList[i][3]);
+            Log.d(TAG, rowStrList[i][4]);
         }
 
         progressDialog=new ProgressDialog(uiActivity);
         progressDialog.setTitle("Please wait");
-        if(rowStrList[i][3]==null) {
+        if(rowStrList[i][4]==null) {
             progressDialog.setMessage("SMS自動送信中(NEXT➡︎" + nexttimeIniProgresstr.substring(0, 5) + ")...");
         }
 
@@ -168,6 +180,15 @@ public class AsyncSMSsend extends AsyncTask<Integer, Integer, Integer> {
         j=0;
 
         for (i = 0; i < trcnt; i++) {
+            if (i!=0 && i%50==0){
+                try {
+                    Thread.sleep(30 * 1000);
+                    Log.d(TAG, "50の公約数：wait");
+                } catch (Exception e) {
+                    Log.d(TAG, "50の公約数：wait:err");
+                }
+            }
+
             if (exeSmsSend(0)==true){
                 break;
             }
@@ -178,20 +199,20 @@ public class AsyncSMSsend extends AsyncTask<Integer, Integer, Integer> {
 //                if (exeSmsSend(1)==true){
 //                    break;
 //                }
+//                publishProgress(j);
 //            }
-//            try {
-//                Log.d(TAG, "Thread.sleep");
-//                Thread.sleep(30 * 1000);
-//            } catch (Exception e) {
-//                Log.d(TAG, "err(send):" + i);
-//            }
-//            publishProgress(j);
+//
 //            //次回送信時間定義
 //            cal.add(Calendar.HOUR_OF_DAY, formatDate.getHours());
 //            cal.add(Calendar.MINUTE, formatDate.getMinutes());
 //            Log.d(TAG, "Addtime" + i + ":" + cal.getTime().toString());
 //        }
         Log.d(TAG, "sendALLcount:" + j);
+        //処理を終了させる
+        if (isCancelled()) {
+            Log.d(TAG,"キャンセル処理");
+            return null;
+        }
         return i;
     }
 
@@ -270,23 +291,15 @@ public class AsyncSMSsend extends AsyncTask<Integer, Integer, Integer> {
                     diff2 = nowtimestr2.compareTo(nexttimestr2);
                     rowStrList[i][1] = nowtimestr;
                     nexttimeIniProgresstr = nexttimestr;
-                    rowStrList[i][3] = nexttimestr;
+                    rowStrList[i][4] = nexttimestr;
                 } catch (Exception e) {
                     Log.d(TAG, "err(NEXTwait)" + nowtimestr2 + ":" + i);
                 }
             }
         }else {
-            cal.add(Calendar.HOUR_OF_DAY, formatDate.getHours());
-            cal.add(Calendar.MINUTE, formatDate.getMinutes());
-            nexttime = cal.getTime();
-            nexttimestr = String.format(String.format("%1$02d", nexttime.getHours()) + ":" + String.format("%1$02d", nexttime.getMinutes()));
-
             try {
-                nowtimestr2 = sdf2.parse(nowtimestr);
-                diff2 = nowtimestr2.compareTo(nexttimestr2);
                 rowStrList[i][1] = nowtimestr;
-                nexttimeIniProgresstr = nexttimestr;
-                rowStrList[i][3] = nexttimestr;
+                rowStrList[i][4] = IninexttimeStr;
             } catch (Exception e) {
                 Log.d(TAG, "err(NEXTwait)" + nowtimestr2 + ":" + i);
             }
@@ -297,24 +310,24 @@ public class AsyncSMSsend extends AsyncTask<Integer, Integer, Integer> {
             public void onReceive(Context arg0, Intent arg1) {
                 switch (getResultCode()) {
                     case Activity.RESULT_OK:
-                        BroadReceiveStr[i] = "送信成功";
-                        Log.d(TAG, "Sent送信成功:" + i);
+                        smsSent[i] = "○";
+                        //Log.d(TAG, "Sent送信失敗(RESULT_OK):" + i+smsSent[i]);
                         break;
                     case SmsManager.RESULT_ERROR_GENERIC_FAILURE:
-                        BroadReceiveStr[i] = "送信失敗";
-                        Log.d(TAG, "Sent送信失敗:" + i);
+                        smsSent[i] = "×";
+                        //Log.d(TAG, "Sent送信失敗(RESULT_ERROR_GENERIC_FAILURE):" + i+smsSent[i]);
                         break;
                     case SmsManager.RESULT_ERROR_NO_SERVICE:
-                        BroadReceiveStr[i] = "配達失敗";
-                        Log.d(TAG, "Sent配達失敗:" + i);
+                        smsSent[i] = "×";
+                        //Log.d(TAG, "Sent配達失敗(RESULT_ERROR_NO_SERVICE):" + i+smsSent[i]);
                         break;
                     case SmsManager.RESULT_ERROR_NULL_PDU:
-                        BroadReceiveStr[i] = "配達失敗";
-                        Log.d(TAG, "Sent配達失敗:" + i);
+                        smsSent[i] = "×";
+                        //Log.d(TAG, "Sent配達失敗(RESULT_ERROR_NULL_PDU):" + i+smsSent[i]);
                         break;
                     case SmsManager.RESULT_ERROR_RADIO_OFF:
-                        BroadReceiveStr[i] = "配達失敗";
-                        Log.d(TAG, "Sent配達失敗:" + i);
+                        smsSent[i] = "×";
+                        //Log.d(TAG, "Sent配達失敗(RESULT_ERROR_RADIO_OFF):" + i+smsSent[i]);
                         break;
                 }
             }
@@ -326,12 +339,12 @@ public class AsyncSMSsend extends AsyncTask<Integer, Integer, Integer> {
             public void onReceive(Context arg0, Intent arg1) {
                 switch (getResultCode()) {
                     case Activity.RESULT_OK:
-                        BroadReceiveStr[i] = "送信成功";
-                        Log.d(TAG, "Deliverd送信成功:" + i);
+                        smsDeliverd[i] = "○";
+                        //Log.d(TAG, "Deliverd配達成功(RESULT_OK):" + i+smsDeliverd[i]);
                         break;
                     case Activity.RESULT_CANCELED:
-                        BroadReceiveStr[i] = "配達失敗";
-                        Log.d(TAG, "Deliverd配達失敗:" + i);
+                        smsDeliverd[i] = "×";
+                        //Log.d(TAG, "Deliverd配達失敗(RESULT_CANCELED):" + i+smsDeliverd[i]);
                         break;
                 }
             }
@@ -353,6 +366,24 @@ public class AsyncSMSsend extends AsyncTask<Integer, Integer, Integer> {
                 destinationAddress,
                 null, txt, sentPI, deliveredPI);
 
+        int breakCounta=0;
+        while (smsSent[i]== null || smsDeliverd[i]== null) {
+            Log.d(TAG, "smsSent["+i+"]:null");
+            Log.d(TAG, "Deliverd["+i+"]:null");
+            try {
+                Thread.sleep(3 * 1000);
+            } catch (Exception e) {
+                Log.d(TAG, "err(smsSent["+i+"]:null)");
+            }
+            breakCounta++;
+            Log.d(TAG, "breakCounta"+breakCounta);
+            if (breakCounta==5){
+                break;
+            }
+
+        }
+        Log.d(TAG, "Sent送信実行:" + i+smsSent[i]);
+        Log.d(TAG, "Deliverd配信実行:" + i+smsDeliverd[i]);
         return false;
     }
 
@@ -373,15 +404,29 @@ public class AsyncSMSsend extends AsyncTask<Integer, Integer, Integer> {
     protected void onPostExecute(Integer result){
         Log.d(TAG, "onPostExecute");
 
-        for (i = 0; i < result; i++) {
-            tr = (TableRow) vg.getChildAt(i);
-            //((TextView) (tr.getChildAt(0))).setText(rowStrList[i][0]);
-            ((TextView) (tr.getChildAt(1))).setText(rowStrList[i][1]);
-            ((TextView) (tr.getChildAt(2))).setText(BroadReceiveStr[i]);
-            ((TextView) (tr.getChildAt(3))).setText(rowStrList[i][3]);
-        }
+        i=0;
 
-        Log.d(TAG, "progressDialog.dismiss");
+        for (i = 0; i < result; i++) {
+            if (smsSent[i]==null) {
+                smsSent[i] = "×";
+            }else if(smsDeliverd[i]==null) {
+                smsDeliverd[i]="×";
+            }
+
+            tr = (TableRow) vg.getChildAt(i);
+            ((TextView) (tr.getChildAt(1))).setText(rowStrList[i][1]);
+            ((TextView) (tr.getChildAt(2))).setText(smsSent[i]);
+            if (smsSent[i]=="×"){
+                ((TextView) (tr.getChildAt(2))).setTextColor(Color.RED);
+            }
+            ((TextView) (tr.getChildAt(3))).setText(smsDeliverd[i]);
+            if (smsDeliverd[i]=="×"){
+                ((TextView) (tr.getChildAt(3))).setTextColor(Color.RED);
+            }
+            ((TextView) (tr.getChildAt(4))).setText(rowStrList[i][4]);
+            }
+
+            Log.d(TAG, "progressDialog.dismiss");
         progressDialog.dismiss();
     }
 
@@ -391,5 +436,6 @@ public class AsyncSMSsend extends AsyncTask<Integer, Integer, Integer> {
     @Override
     protected void onCancelled(){
         progressDialog.dismiss();
+        Log.d(TAG,"キャンセル処理が行われました");
     }
 }

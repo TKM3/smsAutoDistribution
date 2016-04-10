@@ -18,6 +18,11 @@
               android:gravity="center"
               android:layout_width="@dimen/second_column_result_width"/>
     <TextView
+        android:textColor="@color/white"
+        android:background="@drawable/frame_border"
+        android:gravity="center"
+        android:layout_width="@dimen/second_column_result_width"/>
+    <TextView
               android:textColor="@color/white"
               android:background="@drawable/frame_border"
               android:gravity="center"

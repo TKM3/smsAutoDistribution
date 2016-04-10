@@ -27,11 +27,20 @@ public class SecondActivity extends AppCompatActivity
         implements FileSelectionDialog.OnFileSelectListener {
 
     // 初期フォルダ
+    String TAG = "SecondActivity";
     String m_strInitialDir = "/";
     AsyncSMSsend AsynkSMSsendTask;
     AsyncCSVread AsyncCSVreadTask;
     AlertDialog.Builder alertDlg;
     int argTask;
+
+    TextView text;
+    ViewGroup vg;
+    TableLayout table;
+    TextView txtEndTime;
+    TextView txtIntervalTime;
+    TextView txtStartTime;
+    CheckBox CheckBox;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,19 +60,15 @@ public class SecondActivity extends AppCompatActivity
         final Button btnEndTimeSet = (Button) findViewById(R.id.btnEndTimeSet);
         final Button btnIntervalSet = (Button) findViewById(R.id.btnIntervalSet);
         final Button btnSmsAutoSend = (Button) findViewById(R.id.btnSmsAutoSend);
-        final CheckBox CheckBox = (CheckBox) findViewById(R.id.cbxSim);
+        CheckBox = (CheckBox) findViewById(R.id.cbxSim);
 
-        final ViewGroup vg = (ViewGroup) findViewById(R.id.tblLayout);
-        final TableLayout table = (TableLayout) findViewById(R.id.tblLayout);
-        final TextView text = (TextView) findViewById(R.id.txtInfo);
-        final TextView txtEndTime = (TextView) findViewById(R.id.txtEndTime);
-        final TextView txtIntervalTime = (TextView) findViewById(R.id.txtIntervalTime);
-        final TextView txtStartTime = (TextView) findViewById(R.id.txtStartTime);
+        vg = (ViewGroup) findViewById(R.id.tblLayout);
+        table = (TableLayout) findViewById(R.id.tblLayout);
+        text = (TextView) findViewById(R.id.txtInfo);
+        txtEndTime = (TextView) findViewById(R.id.txtEndTime);
+        txtIntervalTime = (TextView) findViewById(R.id.txtIntervalTime);
+        txtStartTime = (TextView) findViewById(R.id.txtStartTime);
 
-
-        //タスクの生成
-        AsynkSMSsendTask=new AsyncSMSsend(this,vg,text,txtEndTime,txtIntervalTime,txtStartTime);
-        AsyncCSVreadTask=new AsyncCSVread(this,text,CheckBox,vg,table);
         btnExitSecond.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -98,11 +103,14 @@ public class SecondActivity extends AppCompatActivity
                                 //OKボタンクリック処理
                                 btnSmsAutoSend.setTextColor(Color.WHITE);
 
+                                //タスクの生成
+                                AsynkSMSsendTask=new AsyncSMSsend(SecondActivity.this,vg,text,txtEndTime,txtIntervalTime,txtStartTime);
                                 String dateStr = txtIntervalTime.getText().toString();
                                 String endtimeStr = txtEndTime.getText().toString();
                                 SimpleDateFormat sdf2 = new SimpleDateFormat("HH:mm");
 
                                 try {
+
                                     Date formatDate = sdf2.parse(dateStr);
 
 //                                  //終了時間チェック
@@ -128,7 +136,12 @@ public class SecondActivity extends AppCompatActivity
                                 } catch (Exception e) {
                                     System.out.println("e");
                                 }
-                                AsynkSMSsendTask.execute(argTask);
+                                try {
+                                    AsynkSMSsendTask.execute(argTask);
+                                }catch (IllegalStateException e){
+                                    AsynkSMSsendTask.isCancelled();
+                                    Log.d(TAG,"AsynkSMSsendTask.execute:err");
+                                }
                             }
                         });
                 alertDlg.setNegativeButton(
@@ -216,7 +229,8 @@ public class SecondActivity extends AppCompatActivity
 
     //セカンド画面にて【CSV読込み】ボタンを押下した時の処理
     public void csvRead() {
-
+        //タスクの生成
+        AsyncCSVreadTask=new AsyncCSVread(this,text,CheckBox,vg,table);
         // 確認ダイアログの生成
         final Button btnCsvRead = (Button) findViewById(R.id.btnCsvRead);
         AlertDialog.Builder alertDlg = new AlertDialog.Builder(this);
@@ -229,7 +243,12 @@ public class SecondActivity extends AppCompatActivity
                     public void onClick(DialogInterface dialog, int which) {
                         // OKボタンクリック処理
                         btnCsvRead.setTextColor(Color.BLACK);
-                        AsyncCSVreadTask.execute(argTask);
+                        try {
+                            AsyncCSVreadTask.execute(argTask);
+                        } catch (IllegalStateException e) {
+
+                            Log.d(TAG,"AsyncCSVreadTask.execute:err");
+                        }
                     }
                 });
         alertDlg.setNegativeButton(

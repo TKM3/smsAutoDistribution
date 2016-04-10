@@ -64,6 +64,7 @@ public class AsyncCSVread extends AsyncTask<Integer, Integer, Integer> {
         progressDialog.setMessage("CSV読込み中...");
         progressDialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
         progressDialog.setIndeterminate(false);
+        progressDialog.setCancelable(true);
         progressDialog.show();
     }
 
@@ -111,6 +112,11 @@ public class AsyncCSVread extends AsyncTask<Integer, Integer, Integer> {
         } catch (IOException e) {
             Log.d(TAG,"bufferReader:err");
         }
+        //処理を終了させる
+        if (isCancelled()) {
+            Log.d(TAG,"キャンセル処理");
+            return null;
+        }
         return i;
     }
 
@@ -147,6 +153,7 @@ public class AsyncCSVread extends AsyncTask<Integer, Integer, Integer> {
             ((TextView) (tr.getChildAt(1))).setText(empty_str);
             ((TextView) (tr.getChildAt(2))).setText(empty_str);
             ((TextView) (tr.getChildAt(3))).setText(empty_str);
+            ((TextView) (tr.getChildAt(4))).setText(empty_str);
             Log.d(TAG, "inflate:" + j);
         }
 
@@ -154,5 +161,15 @@ public class AsyncCSVread extends AsyncTask<Integer, Integer, Integer> {
 
         Log.d(TAG, "progressDialog.dismiss");
         progressDialog.dismiss();
+    }
+
+    /**
+     * 中止された際の処理
+     */
+    @Override
+    protected void onCancelled(){
+        progressDialog.dismiss();
+        progressDialog=null;
+        Log.d(TAG, "キャンセル処理が行われました");
     }
 }

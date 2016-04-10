@@ -27,7 +27,7 @@
     <dimen name="second_column_kouban_width">20dp</dimen>
     <dimen name="second_column_telno_width">125dp</dimen>
     <dimen name="second_column_sendtime_width">65dp</dimen>
-    <dimen name="second_column_result_width">70dp</dimen>
+    <dimen name="second_column_result_width">35dp</dimen>
     <dimen name="second_column_nexttime_width">65dp</dimen>
 
 
