@@ -87,7 +87,7 @@ public class MainActivity extends AppCompatActivity {
         if (edtPwd.getText().toString().equals("")){
             Toast.makeText(MainActivity.this,"パスワードが入力されていません",Toast.LENGTH_SHORT).show();
             btnLgi.setTextColor(Color.WHITE);
-        }else if(edtPwd.getText().toString().equals("pwd02")) {
+        }else if(edtPwd.getText().toString().equals("pwd01")) {
             // インテントの生成
             Intent intent = new Intent(MainActivity.this,SecondActivity.class);
             // SubActivity の起動

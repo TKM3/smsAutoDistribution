@@ -2,8 +2,8 @@ package com.example.takamasa.smsautodistribution;
 
 import android.app.Activity;
 import android.app.ProgressDialog;
-import android.content.res.AssetManager;
 import android.os.AsyncTask;
+import android.os.Environment;
 import android.util.Log;
 import android.view.ViewGroup;
 import android.widget.CheckBox;
@@ -12,9 +12,11 @@ import android.widget.TableRow;
 import android.widget.TextView;
 
 import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 
 
@@ -32,15 +34,14 @@ public class AsyncCSVread extends AsyncTask<Integer, Integer, Integer> {
 
     final String TAG = "AsyncCSVread";
     ProgressDialog progressDialog;
-    AssetManager assetManager;
-    InputStream is = null;
-    BufferedReader br = null;
     String text = "";
-    String fileAddress="address.csv";
-    String fileInfo="info.txt";
+    final String FILE_ADDRESS="address.csv";
+    final String FILE_INFO="info.txt";
     int i;
     String empty_str = "-";
     ArrayList<String> strTable;
+    BufferedReader reader;
+
 
     /**
      *コンストラクタ
@@ -55,8 +56,8 @@ public class AsyncCSVread extends AsyncTask<Integer, Integer, Integer> {
     }
 
     /**
-    *事前準備の処理を行うメソッド
-    */
+     *事前準備の処理を行うメソッド
+     */
     @Override
     protected void onPreExecute() {
         progressDialog=new ProgressDialog(uiActivity);
@@ -68,7 +69,6 @@ public class AsyncCSVread extends AsyncTask<Integer, Integer, Integer> {
         progressDialog.show();
     }
 
-
     /**
      *バックグラウンドで行う処理
      */
@@ -77,28 +77,56 @@ public class AsyncCSVread extends AsyncTask<Integer, Integer, Integer> {
         Log.d(TAG, "doInBackground");
 
         strTable = new ArrayList<>();
-        assetManager = uiActivity.getResources().getAssets();
+        String path= Environment.getExternalStorageDirectory().getPath()+"/SmsAutoSendFiles/";
+
         try {
+//assetsフォルダから取出し
+//            try {
+//                //assetsフォルダ内のinfo.txtをオープンする
+//                is = uiActivity.getAssets().open(FILE_INFO);
+//                br = new BufferedReader(new InputStreamReader(is));
+//                //1行ずつ読込、改行を付加する
+//                String str;
+//                while ((str = br.readLine()) != null) {
+//                    text += str + "\n";
+//                }
+//
+//            } finally {
+//                if (is != null) is.close();
+//                if (br != null) br.close();
+//            }
+
             try {
-                //assetsフォルダ内のinfo.txtをオープンする
-                is = uiActivity.getAssets().open(fileInfo);
-                br = new BufferedReader(new InputStreamReader(is));
+                reader = new BufferedReader(new InputStreamReader(new FileInputStream(
+                        path + FILE_INFO),"Shift-JIS"));
+
+                BufferedReader bufferReader = new BufferedReader(reader);
                 //1行ずつ読込、改行を付加する
                 String str;
-                while ((str = br.readLine()) != null) {
+                while ((str = bufferReader.readLine()) != null) {
                     text += str + "\n";
                 }
 
-
-            } finally {
-                if (is != null) is.close();
-                if (br != null) br.close();
+            } catch (UnsupportedEncodingException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            } catch (FileNotFoundException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
             }
 
-            // CSVファイルの読み込み
-            InputStream is = assetManager.open(fileAddress);
-            InputStreamReader inputStreamReader = new InputStreamReader(is);
-            BufferedReader bufferReader = new BufferedReader(inputStreamReader);
+            try {
+                reader = new BufferedReader(new InputStreamReader(new FileInputStream(
+                        path + FILE_ADDRESS), "Shift-JIS"));
+            } catch (UnsupportedEncodingException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            } catch (FileNotFoundException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+
+            BufferedReader bufferReader = new BufferedReader(reader);
 
             i = 0;
             //ファイルの件数分ループして配列に格納します。
@@ -122,7 +150,7 @@ public class AsyncCSVread extends AsyncTask<Integer, Integer, Integer> {
 
     /**
      *進捗状況をUIスレッドで表示する
-    */
+     */
     @Override
     protected void onProgressUpdate(Integer... progress) {
     }
