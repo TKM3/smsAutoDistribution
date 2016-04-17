@@ -5,6 +5,7 @@ import android.app.PendingIntent;
 import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.graphics.Color;
@@ -56,6 +57,7 @@ public class AsyncSMSsend extends AsyncTask<Integer, Integer, Integer> {
     int i;
     int diff2;
     int diff3;
+    int cancelInt;
 
     SimpleDateFormat sdf2 = new SimpleDateFormat("HH:mm");
 
@@ -130,7 +132,6 @@ public class AsyncSMSsend extends AsyncTask<Integer, Integer, Integer> {
         Ininexttime = cal5.getTime();
         IninexttimeStr = String.format(String.format("%1$02d", nexttimeIniProgress.getHours()) + ":" + String.format("%1$02d", nexttimeIniProgress.getMinutes()));
 
-
         txt = text.getText().toString();
         trcnt = vg.getChildCount();
 
@@ -152,21 +153,32 @@ public class AsyncSMSsend extends AsyncTask<Integer, Integer, Integer> {
             Log.d(TAG, rowStrList[i][4]);
         }
 
-        progressDialog=new ProgressDialog(uiActivity);
-        progressDialog.setTitle("Please wait");
-        if(rowStrList[i][4]==null) {
-            progressDialog.setMessage("SMS自動送信中(NEXT➡︎" + nexttimeIniProgresstr.substring(0, 5) + ")...");
-        }
-
         //メッセージが成功したかどうかをチェックする
         sentPI = PendingIntent.getBroadcast(uiActivity, 0, new Intent(SENT), 0);
         //メッセージの配達が成功したかどうかをチェックする
         deliveredPI = PendingIntent.getBroadcast(uiActivity, 0, new Intent(DELIVERED), 0);
 
+        progressDialog=new ProgressDialog(uiActivity);
+        progressDialog.setTitle("Please wait");
+        progressDialog.setMessage("SMS自動送信中...");
+//        if(rowStrList[i][4]==null) {
+//            progressDialog.setMessage("SMS自動送信中(NEXT➡︎" + nexttimeIniProgresstr.substring(0, 5) + ")...");
+//        }
         progressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
         progressDialog.setIndeterminate(false);
         progressDialog.setCancelable(true);
-        progressDialog.show();
+        progressDialog.setCanceledOnTouchOutside(false);
+        progressDialog.setButton(DialogInterface.BUTTON_NEGATIVE, "キャンセル",
+                new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        //非同期処理が中断する。
+                        //処理が中断できてからAsyncTask内でProgressDialogを消す。
+                        AsyncSMSsend.this.cancel(true);
+                    }
+                });
+        //progressDialogが削除された際の処理。画面上の表示を更新する。
+                progressDialog.show();
     }
 
     /**
@@ -180,6 +192,14 @@ public class AsyncSMSsend extends AsyncTask<Integer, Integer, Integer> {
         j=0;
 
         for (i = 0; i < trcnt; i++) {
+
+            //処理を終了させる
+            if (isCancelled()) {
+                Log.d(TAG,"キャンセル処理");
+                cancelInt=i;
+                return null;
+            }
+
             if (i!=0 && i%50==0){
                 try {
                     Thread.sleep(30 * 1000);
@@ -195,7 +215,20 @@ public class AsyncSMSsend extends AsyncTask<Integer, Integer, Integer> {
         }
 
 //        for (j=0;j<params[0];j++) {
+//        //処理を終了させる
+//        if (isCancelled()) {
+//            Log.d(TAG,"キャンセル処理");
+//            cancelInt=i;
+//            return null;
+//        }
 //            for (i = 0; i < trcnt; i++) {
+
+//        //処理を終了させる
+//        if (isCancelled()) {
+//            Log.d(TAG,"キャンセル処理");
+//            cancelInt=i;
+//            return null;
+//        }
 //                if (exeSmsSend(1)==true){
 //                    break;
 //                }
@@ -208,11 +241,6 @@ public class AsyncSMSsend extends AsyncTask<Integer, Integer, Integer> {
 //            Log.d(TAG, "Addtime" + i + ":" + cal.getTime().toString());
 //        }
         Log.d(TAG, "sendALLcount:" + j);
-        //処理を終了させる
-        if (isCancelled()) {
-            Log.d(TAG,"キャンセル処理");
-            return null;
-        }
         return i;
     }
 
@@ -242,6 +270,11 @@ public class AsyncSMSsend extends AsyncTask<Integer, Integer, Integer> {
         diff3 = nowtimestr2.compareTo(starttime);
         if(ini==1) {
             while (diff3 < 0) {
+                if (isCancelled()) {
+                    Log.d(TAG,"キャンセル処理");
+                    cancelInt=i;
+                    return Boolean.parseBoolean(null);
+                }
                 Log.d(TAG, "STARTwait");
                 cal4 = Calendar.getInstance();
                 nowtime = cal4.getTime();
@@ -260,6 +293,11 @@ public class AsyncSMSsend extends AsyncTask<Integer, Integer, Integer> {
                     } catch (Exception e) {
                         Log.d(TAG, "err(WAIT):" + i);
                     }
+                    if (isCancelled()) {
+                        Log.d(TAG,"キャンセル処理");
+                        cancelInt=i;
+                        return Boolean.parseBoolean(null);
+                    }
                 } else {
                     break;
                 }
@@ -274,6 +312,11 @@ public class AsyncSMSsend extends AsyncTask<Integer, Integer, Integer> {
         diff2 = nowtimestr2.compareTo(nexttimestr2);
         if(ini==1) {
             while (diff2 < 0) {
+                if (isCancelled()) {
+                    Log.d(TAG,"キャンセル処理");
+                    cancelInt=i;
+                    return Boolean.parseBoolean(null);
+                }
                 Log.d(TAG, "NEXTwait(next):" + nexttimestr2 + ":" + i);
                 Log.d(TAG, "NEXTwait(now):" + nowtimestr2 + ":" + i);
 
@@ -435,6 +478,31 @@ public class AsyncSMSsend extends AsyncTask<Integer, Integer, Integer> {
      */
     @Override
     protected void onCancelled(){
+        i=0;
+
+        for (i = 0; i < cancelInt; i++) {
+            if (smsSent[i]==null) {
+                smsSent[i] = "×";
+            }else if(smsDeliverd[i]==null) {
+                smsDeliverd[i]="×";
+            }
+
+            tr = (TableRow) vg.getChildAt(i);
+            ((TextView) (tr.getChildAt(1))).setText(rowStrList[i][1]);
+            ((TextView) (tr.getChildAt(2))).setText(smsSent[i]);
+            if (smsSent[i]=="×"){
+                ((TextView) (tr.getChildAt(2))).setTextColor(Color.RED);
+            }
+            ((TextView) (tr.getChildAt(3))).setText(smsDeliverd[i]);
+            if (smsDeliverd[i]=="×"){
+                ((TextView) (tr.getChildAt(3))).setTextColor(Color.RED);
+            }
+            ((TextView) (tr.getChildAt(4))).setText(rowStrList[i][4]);
+        }
+
+        Log.d(TAG, "progressDialog.dismiss");
+
+
         progressDialog.dismiss();
         Log.d(TAG,"キャンセル処理が行われました");
     }

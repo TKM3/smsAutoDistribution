@@ -93,8 +93,8 @@ public class SecondActivity extends AppCompatActivity
                 btnSmsAutoSend.setTextColor(Color.RED);
 
                 alertDlg.setTitle("確認");
-
                 alertDlg.setMessage("SMS一括配信処理を開始します。");
+                alertDlg.setCancelable(false);
                 alertDlg.setPositiveButton(
                         "OK",
 
@@ -104,7 +104,7 @@ public class SecondActivity extends AppCompatActivity
                                 btnSmsAutoSend.setTextColor(Color.WHITE);
 
                                 //タスクの生成
-                                AsynkSMSsendTask=new AsyncSMSsend(SecondActivity.this,vg,text,txtEndTime,txtIntervalTime,txtStartTime);
+                                AsynkSMSsendTask = new AsyncSMSsend(SecondActivity.this, vg, text, txtEndTime, txtIntervalTime, txtStartTime);
                                 String dateStr = txtIntervalTime.getText().toString();
                                 String endtimeStr = txtEndTime.getText().toString();
                                 SimpleDateFormat sdf2 = new SimpleDateFormat("HH:mm");
@@ -138,9 +138,9 @@ public class SecondActivity extends AppCompatActivity
                                 }
                                 try {
                                     AsynkSMSsendTask.execute(argTask);
-                                }catch (IllegalStateException e){
+                                } catch (IllegalStateException e) {
                                     AsynkSMSsendTask.isCancelled();
-                                    Log.d(TAG,"AsynkSMSsendTask.execute:err");
+                                    Log.d(TAG, "AsynkSMSsendTask.execute:err");
                                 }
                             }
                         });
@@ -236,7 +236,7 @@ public class SecondActivity extends AppCompatActivity
         AlertDialog.Builder alertDlg = new AlertDialog.Builder(this);
         alertDlg.setTitle("確認");
         alertDlg.setMessage("宛先CSVを選択して下さい。");
-
+        alertDlg.setCancelable(false);
         alertDlg.setPositiveButton(
                 "OK",
                 new DialogInterface.OnClickListener() {

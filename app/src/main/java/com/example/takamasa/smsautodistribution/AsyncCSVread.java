@@ -66,6 +66,7 @@ public class AsyncCSVread extends AsyncTask<Integer, Integer, Integer> {
         progressDialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
         progressDialog.setIndeterminate(false);
         progressDialog.setCancelable(true);
+        progressDialog.setCanceledOnTouchOutside(false);
         progressDialog.show();
     }
 
