@@ -167,7 +167,7 @@ public class AsyncCSVread extends AsyncTask<Integer, Integer, Integer> {
         Log.d(TAG, "removeAllViews");
 
         //配列の要素分処理を繰り返し表示する。
-        for (int j = 0; j < strTable.size() - 1; j++) {
+        for (int j = 0; j < strTable.size(); j++) {
             String telstr = strTable.get(j);
             //行を追加
             uiActivity.getLayoutInflater().inflate(R.layout.table_row, vg);
